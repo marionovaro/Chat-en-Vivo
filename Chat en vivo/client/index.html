@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <title>Live Chat</title> <! el estilo lo poene en el minuto 25 !>
+    <script type="module">
+        import {io} from "https://cdn.socket.io/4.3.2/socket.io.esm.min.js"  //? podemos importar dependencias externas desde el url
+
+        const socket = io()
+        const form = document.getElementById("form") // cogemos el form del html a través del id (contiene input y boton)
+        const input = document.getElementById("input") // cogemos el input del html a través del id (donde ponemos los mensajes)
+        const messages = document.getElementById("messages")
+
+        socket.on("chat message", (msg) => {
+            const item = `<li>${msg}</li>`
+            messages.insertAdjacentHTML("beforeend", item) //? le estamos diciendo que añada el item creado en la linea anterior en la ultima posicon (beforeend) del ul de mesages (pq ha sido el ultimo mensaje)
+        })
+
+        form.addEventListener("submit", (e) => { //? cuando le damos al botón de enviar
+            e.preventDefault() //? evitamos que se ejecute lo que está predeterminado
+
+            if (input.value) { //? si recibimos algun valor en el input: 
+                socket.emit("chat message", input.value) // enviamos un chat message con el valor que haya en el input
+                input.value = "" // reseteamos el valor para que una vez mandado el mensaje no se quede el mensaje en el input
+            } // ----------- HEMOS HECHO EL ENVÍO -------------
+            // HASTA AQUÍ ESTAMOS ENVIANDO LA INFO A TRAVÉS DEL INPUT Y EL SERVIDOR LA ESTA RECIBIENDO, PERO ÉSTE NO ESTÁ HACIENDO NADA CON ESA INFO, QUE ES LO QUE VAMOS A HACER AHORA
+        })
+    </script>
+</head>
+
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        :root {
+            color-scheme: dark;
+        }
+
+        body{
+            margin: 0;
+            display: grid;
+            display: flex;
+            place-content: center;
+            justify-content: center;
+
+            height: 100vh;
+            padding: 36px;
+            grid-template-columns: 1fr;
+        }
+
+        #messages{
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+
+        }
+
+        #messages > li{
+            padding: .5rem 1rem;
+        }
+
+        #messages > li:nth-child(odd){
+            background: #000;
+        }
+
+        #chat {
+            border: 1px solid #ccc
+            ;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 350px;
+            height: 100%;
+            position: relative;
+        }
+
+        #form{
+            bottom: 0;
+            display: flex;
+            height: 48px;
+            left: 0;
+            padding: 4px;
+            position: absolute;
+            right: 0;
+        }
+
+        #input{
+            border-radius: 9999px;
+            border: 1px solid #eee;
+            flex: 1; /* ocupa todo el espacio que pueda*/
+            margin: 4px;
+            padding: 0 8px;
+        }
+
+        #input:focus{
+            outline: 0; /* le decimos que cuando esté encima del input (lugar para poner mensajes) no se ponga mas gorda la linea de border*/
+        }
+
+        #form > button {
+            background: #09f;
+            color: fff;
+            border: 0;
+            margin: 4px;
+            border-radius: 4px;
+        }
+    </style>
+
+<body>
+    <section id="chat">
+        <ul id="messages"></ul>
+        <form id="form">
+            <input type="text" name="message" id="input" placeholder="Type a message" autocomplete="off"/>
+            <button type="submit">Enviar</button>
+        </form>
+    </section>
+</body>
+
+</html>

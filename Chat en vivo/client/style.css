@@ -1,0 +1,25 @@
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body{
+    margin: 0;
+    display: grid;
+    place-content: center;
+    height: 100vh;
+    padding: 36px;
+    grid-template-columns: 1fr;
+    border: 1px solid black;
+}
+
+#chat {
+    border: 1px solid black;
+    border-radius: 4px;
+    overflow: hidden;
+    width: 350px;
+    height: 100%;
+    position: relative;
+}
