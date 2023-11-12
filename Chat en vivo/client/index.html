@@ -8,14 +8,38 @@
     <script type="module">
         import {io} from "https://cdn.socket.io/4.3.2/socket.io.esm.min.js"  //? podemos importar dependencias externas desde el url
 
-        const socket = io()
+        const getUsername = async () => { //? -------- CREAMOS USERNAME A TRAVÉS DE LLAMADA A UNA API QUE NOS LO CREA RANDOM
+            const username = localStorage.getItem("username")
+            if (username) {
+                console.log(`User existed ${username}`)
+                return username
+            }
+            const res = await fetch("https://random-data-api.com/api/users/random_user")
+            const {username: randomUsername} = await res.json() //? recibimos el username rando de la api, lo transformamos para meterlo en el localstorage
+
+            localStorage.setItem("username", randomUsername) //? guardamos un usuario con el usuario generado
+            return randomUsername
+        }
+
+        const socket = io({
+            auth: { //? este auth nos dice cual es el úlitmo menaje, y se va actualizando a medida que enviamos nuevos mensajes. lo que ponemos en este objeto del io({...}) es info que va siempre junto al mensaje y se envía con él
+                username: await getUsername(), //? aquí creamos el nombre de usuario con la función y llamada a la api hecha en getUsername()
+                serverOffset: 0
+            }
+        })
+
         const form = document.getElementById("form") // cogemos el form del html a través del id (contiene input y boton)
         const input = document.getElementById("input") // cogemos el input del html a través del id (donde ponemos los mensajes)
         const messages = document.getElementById("messages")
 
-        socket.on("chat message", (msg) => {
-            const item = `<li>${msg}</li>`
+        socket.on("chat message", (msg, serverOffset, username) => {
+            const item = `<li>
+                <p>${msg}</p>
+                <small>${username}</small>
+                </li>`
             messages.insertAdjacentHTML("beforeend", item) //? le estamos diciendo que añada el item creado en la linea anterior en la ultima posicon (beforeend) del ul de mesages (pq ha sido el ultimo mensaje)
+            socket.auth.serverOffset = serverOffset
+            messages.scrollTop = messages.scrollHeight // hacemos que vaya scrolleando hacia abajo cuando hay nuevos mensajes
         })
 
         form.addEventListener("submit", (e) => { //? cuando le damos al botón de enviar
@@ -57,6 +81,12 @@
             list-style-type: none;
             margin: 0;
             padding: 0;
+            overflow-y: scroll;
+            height: 100%;
+            scroll-behavior: smooth;
+            padding-bottom: 48px;
+
+
 
         }
 

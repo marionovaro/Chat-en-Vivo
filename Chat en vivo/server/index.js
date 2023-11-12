@@ -22,12 +22,13 @@ const db = createClient({ //? ----- estamos creando la base de datos con turo
 await db.execute(`
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        content TEXT
+        content TEXT,
+        user TEXT
     )
 `)
 //? id INTEGER PRIMARY KEY AUTOINCREMENT --> es un entero, el la llave principal por lo que no se puede modificar y es unica, y cada vez que se haga enviar se cambia por el autoincrement
 
-io.on("connection", (socket) => { //? cada vez que se conecta alguien ejecuto el callback
+io.on("connection", async (socket) => { //? cada vez que se conecta alguien ejecuto el callback
     console.log("a user has connected!")
 
     socket.on("disconnect", () => { //? cada vez que se desconecta alguien ejecuto el callback
@@ -37,17 +38,32 @@ io.on("connection", (socket) => { //? cada vez que se conecta alguien ejecuto el
     socket.on("chat message", async (msg) => { //? cuando reciba un mensaje (lo hemos enviado en el index con el eventListener):
         console.log("message: " + msg) //? nos muestra el mensaje (msg) en la consola
         let result
+        const username = socket.handshake.auth.username ?? "anonymous" //? pillamos el username de esa informacion que siempre va con el mensaje
         try {
             result = await db.execute({
-                sql: `INSERT INTO messages (content) VALUES (:message)`, //? le metemos dentro del contenido de los mensajes el mensaje que se ha enviado
-                args: {message: msg} //? aquí estipulamos que el valor que meteremos es el mensaje que se ha enviado
+                sql: `INSERT INTO messages (content, user) VALUES (:message, :username)`, //? le metemos dentro del contenido de los mensajes el mensaje que se ha enviado
+                args: {message: msg, username} //? aquí estipulamos que el valor que meteremos es el mensaje que se ha enviado
             })
         } catch (error) {
             console.log(error)
             return
         }
-        io.emit("chat message", msg, result.lastInsertRowid.toString()) //? aquí estamos emitiendo el mensaje a todo el mundo (BROADCAST) (Ver captura de pantalla: Socket emit - io emit) y también enviamos el id del mensaje que se ha enviado (creado en el id INTEGER PRIMARY KEY AUTOINCREMENT)
+        io.emit("chat message", msg, result.lastInsertRowid.toString(), username) //? aquí estamos emitiendo el mensaje a todo el mundo (BROADCAST) (Ver captura de pantalla: Socket emit - io emit) y también enviamos el id del mensaje que se ha enviado (creado en el id INTEGER PRIMARY KEY AUTOINCREMENT)
     })
+
+    if (!socket.recovered) { //? si no se han recuperado los mensajes sin conexión
+        try {
+            const results = await db.execute({
+                sql: "SELECT id, content, user FROM messages WHERE id > ?",
+                args: [socket.handshake.auth.serverOffset ?? 0] //? le decimos que pille el valor que damos con los mensajes que es el serverOffset, el id del ultimo mensaje enviado. predeterminado es 0
+        })
+        results.rows.forEach(row => { //? ------------------------------------ por cada fila que se cree en el try anterior (results) emitimos un mensaje con el contenido de la fila y el id 
+            socket.emit("chat message", row.content, row.id.toString(), row.user) //? 
+        })
+        } catch (error) {
+            console.error(error)
+        }
+    }
 })
 
 app.use(logger("dev")) //? nos da información sobre lo que se ha pedido y se ha enviado en la url
